@@ -45,6 +45,8 @@ type HelloMsg struct {
 // RPCMsg maps the xml value of <rpc> in RFC6241
 type RPCMsg struct {
 	XMLName   xml.Name `xml:"urn:ietf:params:xml:ns:netconf:base:1.0 rpc"`
+	Ds        string   `xml:"xmlns:ds,attr,omitempty"`
+	Ncds      string   `xml:"xmlns:ncds,attr,omitempty"`
 	MessageID uint64   `xml:"message-id,attr"`
 	Operation any      `xml:",innerxml"`
 }

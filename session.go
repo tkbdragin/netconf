@@ -67,12 +67,13 @@ type Session struct {
 // A typical use of the NofificationHandler function is to retrieve notifications once they are received so
 // that they can be parsed and/or stored somewhere.
 // Sample usage:
-// func GetNotificationsHandler(c chan string) netconf.NotificationsHandler {
-//	return func(nm NotificationMsg) {
-//		// just send the raw notification data to the channel
-//		c <- nm
+//
+//	func GetNotificationsHandler(c chan string) netconf.NotificationsHandler {
+//		return func(nm NotificationMsg) {
+//			// just send the raw notification data to the channel
+//			c <- nm
+//		}
 //	}
-//}
 type NotificationHandler func(msg NotificationMsg)
 
 func newSession(transport transport.Transport, opts ...SessionOption) *Session {
@@ -341,6 +342,37 @@ func (s *Session) Do(ctx context.Context, msg *RPCMsg) (*RPCReplyMsg, error) {
 func (s *Session) Call(ctx context.Context, op any, resp any) error {
 	msg := &RPCMsg{
 		Operation: op,
+	}
+
+	reply, err := s.Do(ctx, msg)
+	if err != nil {
+		return err
+	}
+
+	// return rpc errors if we have them
+	switch {
+	case len(reply.Errors) == 1:
+		return reply.Errors[0]
+	case len(reply.Errors) > 1:
+		return reply.Errors
+	}
+
+	// unmarshal the body
+	if resp != nil {
+		if err = xml.Unmarshal(reply.Body, resp); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// CallNMDA issues a NMDA rpc call for the given NETCONF operation and unmarshaling the
+// response into `resp`.
+func (s *Session) CallNMDA(ctx context.Context, op any, resp any) error {
+	msg := &RPCMsg{
+		Operation: op,
+		Ds:        "urn:ietf:params:xml:ns:yang:ietf-datastores",
+		Ncds:      "urn:ietf:params:xml:ns:yang:ietf-netconf-nmda",
 	}
 
 	reply, err := s.Do(ctx, msg)
